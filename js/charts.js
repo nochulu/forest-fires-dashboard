@@ -110,7 +110,7 @@ const Charts = (() => {
     }
 
     // пожар выбран на карте - показать его динамику
-    EventBus.on('fire:selected', ({ rows }) => {
+    EventBus.on('fire:data', ({ rows }) => {
         if (!rows?.length) return;
         const idx = getIndex();
         const key = idx + '_median';
