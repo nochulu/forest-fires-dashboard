@@ -25,6 +25,31 @@ async function loadMetadata() {
     });
 }
 
+function initFireDropdown() {
+    const sel = document.getElementById('filter-fire');
+    Papa.parse('data/dashboard_fires_metadata.csv', {
+        download: true, header: true,
+        complete({ data }) {
+            data.filter(r => r.fire_id).forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.fire_id;
+                opt.textContent = 'ID ' + r.fire_id +
+                    (r.Area ? ' (' + Math.round(parseFloat(r.Area)).toLocaleString('ru') + ' га)' : '');
+                sel.appendChild(opt);
+            });
+        }
+    });
+    sel.addEventListener('change', () => {
+        const fireId = sel.value;
+        if (fireId) {
+            EventBus.emit('fire:selected', { fireId });
+        } else {
+            EventBus.emit('fire:deselected');
+            hideAnalytics();
+        }
+    });
+}
+
 function initYearDropdown() {
     const sel = document.getElementById('filter-year');
     for (let y = 2000; y <= 2025; y++) {
@@ -61,6 +86,7 @@ function bindFilters() {
     });
 
     document.getElementById('btn-reset').addEventListener('click', () => {
+        document.getElementById('filter-fire').value      = '';
         document.getElementById('filter-forestry').value  = '';
         document.getElementById('filter-index').value     = 'NDVI';
         document.getElementById('filter-year').value      = '';
@@ -129,6 +155,7 @@ EventBus.on('fire:selected', ({ fireId }) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+    initFireDropdown();
     initYearDropdown();
     bindFilters();
     await Promise.all([loadViData(), loadMetadata()]);

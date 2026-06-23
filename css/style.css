@@ -189,7 +189,7 @@ body {
 /* ГРАФИКИ */
 .charts-area {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     border-top: 1px solid var(--border);
     background: var(--border);
     gap: 1px;

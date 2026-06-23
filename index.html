@@ -21,6 +21,13 @@
             <p class="sidebar-title">Фильтры</p>
 
             <div class="filter-group">
+                <label for="filter-fire">Выбор пожара</label>
+                <select id="filter-fire">
+                    <option value="">Все пожары</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
                 <label for="filter-forestry">Лесничество</label>
                 <select id="filter-forestry">
                     <option value="">Все лесничества</option>
@@ -120,6 +127,10 @@
                 <div class="chart-card">
                     <p class="chart-title">Площади пожаров по лесничествам</p>
                     <canvas id="chart-bar"></canvas>
+                </div>
+                <div class="chart-card">
+                    <p class="chart-title">Динамика растительного покрова</p>
+                    <canvas id="chart-veg"></canvas>
                 </div>
             </div>
         </main>

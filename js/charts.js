@@ -2,6 +2,7 @@ const Charts = (() => {
     let lineChart = null;
     let barChart = null;
     let globalData = null;
+    let vegChart = null;
 
     const INDEX_COLORS = {
         NDVI: '#4caf82',
@@ -72,6 +73,56 @@ const Charts = (() => {
         });
     }
 
+    function renderVeg(labels, data) {
+        const ctx = document.getElementById('chart-veg').getContext('2d');
+        if (vegChart) vegChart.destroy();
+        const shortened = labels.map(l => l.length > 20 ? l.slice(0, 19) + '…' : l);
+        vegChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: shortened,
+                datasets: [{
+                    label: 'Площадь (га)',
+                    data,
+                    backgroundColor: '#5b9bd555',
+                    borderColor: '#5b9bd5',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: scaleStyle,
+                    y: { ticks: { color: '#8b90a8', font: { size: 9 } }, grid: { color: '#363a57' } }
+                }
+            }
+        });
+    }
+
+    function loadVegChart(fireId) {
+        Papa.parse('data/areas_vegetation_in_fires_2005.csv', {
+            download: true, header: true,
+            complete({ data }) {
+                const fireRows = data.filter(r => r.fire_idx == fireId);
+                if (!fireRows.length) {
+                    if (vegChart) { vegChart.destroy(); vegChart = null; }
+                    return;
+                }
+                const row = fireRows.find(r => r.year == '2005') || fireRows[fireRows.length - 1];
+                const vegCols = Object.keys(row).filter(k => k !== 'fire_idx' && k !== 'year');
+                const nonZero = vegCols
+                    .map(k => ({ name: k, val: parseFloat(row[k]) || 0 }))
+                    .filter(x => x.val > 0)
+                    .sort((a, b) => b.val - a.val)
+                    .slice(0, 8);
+                if (nonZero.length) renderVeg(nonZero.map(x => x.name), nonZero.map(x => x.val));
+            }
+        });
+    }
+
     // загружаем глобальные данные и рисуем оба графика
     async function loadGlobal() {
         const res = await fetch('data/dashboard_data.json');
@@ -110,7 +161,7 @@ const Charts = (() => {
     }
 
     // пожар выбран на карте - показать его динамику
-    EventBus.on('fire:data', ({ rows }) => {
+    EventBus.on('fire:data', ({ fireId, rows }) => {
         if (!rows?.length) return;
         const idx = getIndex();
         const key = idx + '_median';
@@ -120,10 +171,14 @@ const Charts = (() => {
             sorted.map(r => parseFloat(r[key]) || null),
             idx
         );
+        if (fireId) loadVegChart(fireId);
     });
 
     // пожар снят - вернуть глобальный график
-    EventBus.on('fire:deselected', () => renderGlobalLine());
+    EventBus.on('fire:deselected', () => {
+        renderGlobalLine();
+        if (vegChart) { vegChart.destroy(); vegChart = null; }
+    });
 
     // сменили индекс - перерисовать
     EventBus.on('filter:change', () => renderGlobalLine());
