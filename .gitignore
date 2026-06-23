@@ -1,0 +1,51 @@
+# === Система (macOS) ===
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# === Система (Windows) ===
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# === Редакторы кода и IDE (VS Code, PyCharm) ===
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# === Python (Окружение и кэш) ===
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.eggs/
+.pytest_cache/
+.history/
+
+# === Данные и ГИС-файлы (Тяжелые исходники) ===
+*.tif
+*.tiff
+*.twbx
+*.xlsx
+raw_data/
+tifs/
+
+# === Исключения (Что Гит НЕ должен игнорировать) ===
+!*.json
+!*.csv
+!*.geojson
