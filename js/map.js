@@ -5,8 +5,10 @@ const MapModule = (() => {
     let currentIndex = 'NDVI';
     let firesGeoJSON = null;
     let lesnData = null;
+    let pngManifest = {};
+    let currentOverlay = null;
 
-    // Цветовая шкала для индекса: от красного (низкий) до зелёного (высокий)
+    // Цветовая шкала для индекса
     function getColor(value, min, max) {
         if (value === null || value === undefined) return '#666';
         const t = Math.max(0, Math.min(1, (value - min) / (max - min)));
@@ -24,8 +26,17 @@ const MapModule = (() => {
             maxZoom: 18
         }).addTo(map);
 
+        loadManifest();
         loadFires();
         loadLesnichestva();
+        initEventListeners(); // Вынесли подписки на события в отдельный метод
+    }
+
+    // Загрузить манифест растров
+    function loadManifest() {
+        fetch('data/rasters_metadata.json')
+            .then(r => r.json())
+            .then(data => { pngManifest = data; });
     }
 
     // Загрузка полигонов пожаров
@@ -56,16 +67,15 @@ const MapModule = (() => {
             onEachFeature(feature, layer) {
                 const p = feature.properties;
 
-                // Подсказка при наведении
                 layer.bindTooltip(
                     `ID: ${p.fire_id}<br>Площадь: ${Math.round(p.Area)} га`,
                     { sticky: true }
                 );
 
-                // Клик — выбрать пожар
                 layer.on('click', () => {
                     EventBus.emit('fire:selected', {
-                        fireId: String(p.fire_id)
+                        fireId: String(p.fire_id),
+                        year: 2005 // Передаем год, если он известен
                     });
                     highlightFire(String(p.fire_id));
                 });
@@ -73,59 +83,37 @@ const MapModule = (() => {
         }).addTo(map);
     }
 
-    // Подсветить один выбранный пожар
     function highlightFire(fireId) {
         firesLayer.eachLayer(layer => {
             const id = String(layer.feature.properties.fire_id);
             if (id === fireId) {
-                layer.setStyle({
-                    color: '#fff',
-                    weight: 3,
-                    fillOpacity: 0.7
-                });
+                layer.setStyle({ color: '#fff', weight: 3, fillOpacity: 0.7 });
                 layer.bringToFront();
             } else {
-                layer.setStyle({
-                    color: '#ff6b35',
-                    weight: 1,
-                    fillOpacity: 0.15,
-                    opacity: 0.4
-                });
+                layer.setStyle({ color: '#ff6b35', weight: 1, fillOpacity: 0.15, opacity: 0.4 });
             }
         });
     }
 
-    // Загрузка лесничеств
     function loadLesnichestva() {
         fetch('data/lesnichestva.geojson')
             .then(r => r.json())
             .then(geojson => {
                 lesnData = geojson;
-
                 lesnLayer = L.geoJSON(geojson, {
-                    style: {
-                        color: '#4caf82',
-                        weight: 1.5,
-                        fillOpacity: 0,
-                        dashArray: '4 4'
-                    },
+                    style: { color: '#4caf82', weight: 1.5, fillOpacity: 0, dashArray: '4 4' },
                     onEachFeature(feature, layer) {
                         if (feature.properties.name || feature.properties.NAME) {
-                            layer.bindTooltip(
-                                feature.properties.name || feature.properties.NAME
-                            );
+                            layer.bindTooltip(feature.properties.name || feature.properties.NAME);
                         }
                     }
                 }).addTo(map);
-
                 doSpatialJoin();
             });
     }
 
-    // Spatial join: определить в каком лесничестве каждый пожар
     function doSpatialJoin() {
         if (!firesGeoJSON || !lesnData) return;
-
         const byForestry = {};
 
         firesGeoJSON.features.forEach(fire => {
@@ -134,36 +122,27 @@ const MapModule = (() => {
 
             lesnData.features.forEach(lesn => {
                 if (turf.booleanPointInPolygon(center, lesn)) {
-                    foundName = lesn.properties.name ||
-                                lesn.properties.NAME ||
-                                lesn.properties.forestry ||
-                                'Лесничество';
+                    foundName = lesn.properties.name || lesn.properties.NAME || lesn.properties.forestry || 'Лесничество';
                 }
             });
 
-            // Сохраняем лесничество в свойства пожара
             fire.properties.forestry = foundName;
-
             const area = parseFloat(fire.properties.Area) || 0;
             byForestry[foundName] = (byForestry[foundName] || 0) + area;
         });
 
-        // Передаём данные в столбчатую диаграмму
-        const sorted = Object.entries(byForestry)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10);
-
+        const sorted = Object.entries(byForestry).sort((a, b) => b[1] - a[1]).slice(0, 10);
         EventBus.emit('forestry:data', {
             labels: sorted.map(e => e[0]),
             values: sorted.map(e => Math.round(e[1]))
         });
 
-        // Наполнить дропдаун лесничеств
         populateForestryFilter(Object.keys(byForestry).sort());
     }
 
     function populateForestryFilter(names) {
         const sel = document.getElementById('filter-forestry');
+        if (!sel) return;
         names.forEach(name => {
             const opt = document.createElement('option');
             opt.value = name;
@@ -172,26 +151,59 @@ const MapModule = (() => {
         });
     }
 
-    // Слушаем фильтры
-    EventBus.on('filter:change', (filters) => {
-        if (!firesGeoJSON) return;
+    // Формирование имени файла растра
+    function getPngFilename(fireId, year) {
+        const sensor = String(year) === '2024' ? 'sentinel2' : 'landsat5';
+        return `fire${fireId}_${year}_indices_${sensor}.png`; // Исправлено здесь
+    }
 
-        // Фильтр по лесничеству — подсветить нужные
-        if (filters.forestry) {
-            const ids = firesGeoJSON.features
-                .filter(f => f.properties.forestry === filters.forestry)
-                .map(f => String(f.properties.fire_id));
-            renderFires(ids);
-        } else {
-            renderFires();
+    // Отображение растра
+    function showRasterOverlay(fireId, year) {
+        if (currentOverlay) {
+            map.removeLayer(currentOverlay);
+            currentOverlay = null;
         }
-    });
+        const filename = getPngFilename(fireId, year);
+        const info = pngManifest[filename];
+        if (!info) return;
 
-    // Снятие выбора пожара
-    EventBus.on('fire:deselected', () => renderFires());
+        currentOverlay = L.imageOverlay(
+            'data/' + filename,
+            info.bounds,
+            { opacity: 0.75 }
+        ).addTo(map);
+    }
+
+    // Инициализация событий (теперь внутри модуля, map доступен)
+    function initEventListeners() {
+        EventBus.on('filter:change', (filters) => {
+            if (!firesGeoJSON) return;
+            if (filters.forestry) {
+                const ids = firesGeoJSON.features
+                    .filter(f => f.properties.forestry === filters.forestry)
+                    .map(f => String(f.properties.fire_id));
+                renderFires(ids);
+            } else {
+                renderFires();
+            }
+        });
+
+        EventBus.on('fire:deselected', () => {
+            renderFires();
+            if (currentOverlay) {
+                map.removeLayer(currentOverlay);
+                currentOverlay = null;
+            }
+        });
+
+        // Слушаем выбор пожара для отображения растра
+        EventBus.on('fire:selected', ({ fireId, year }) => {
+            showRasterOverlay(fireId, year || 2005);
+        });
+    }
 
     return { init };
 })();
 
-// Запуск карты
+// Запуск приложения
 MapModule.init();
