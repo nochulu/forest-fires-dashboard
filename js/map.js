@@ -103,8 +103,8 @@ const MapModule = (() => {
                 lesnLayer = L.geoJSON(geojson, {
                     style: { color: '#4caf82', weight: 1.5, fillOpacity: 0, dashArray: '4 4' },
                     onEachFeature(feature, layer) {
-                        if (feature.properties.name || feature.properties.NAME) {
-                            layer.bindTooltip(feature.properties.name || feature.properties.NAME);
+                        if (feature.properties.frname || feature.properties.name || feature.properties.NAME) {
+                            layer.bindTooltip(feature.properties.frname || feature.properties.name || feature.properties.NAME);
                         }
                     }
                 }).addTo(map);
@@ -122,7 +122,7 @@ const MapModule = (() => {
 
             lesnData.features.forEach(lesn => {
                 if (turf.booleanPointInPolygon(center, lesn)) {
-                    foundName = lesn.properties.name || lesn.properties.NAME || lesn.properties.forestry || 'Лесничество';
+                    foundName = lesn.properties.frname || lesn.properties.name || lesn.properties.NAME || lesn.properties.forestry || 'Лесничество';
                 }
             });
 
