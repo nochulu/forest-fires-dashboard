@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализ растительности на территории пожаров</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+    <header class="header">
+        <h1>Анализ растительности на территории пожаров Иркутской области (2005)</h1>
+        <span class="header-subtitle">Вегетационные индексы 2000–2025</span>
+    </header>
+
+    <div class="dashboard">
+
+        <!-- ФИЛЬТРЫ -->
+        <aside class="sidebar">
+            <p class="sidebar-title">Фильтры</p>
+
+            <div class="filter-group">
+                <label for="filter-forestry">Лесничество</label>
+                <select id="filter-forestry">
+                    <option value="">Все лесничества</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-index">Вегетационный индекс</label>
+                <select id="filter-index">
+                    <option value="NDVI">NDVI</option>
+                    <option value="NBR">NBR</option>
+                    <option value="EVI">EVI</option>
+                    <option value="NDWI">NDWI</option>
+                    <option value="SAVI">SAVI</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-year">Год</label>
+                <select id="filter-year">
+                    <option value="">Все годы</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-period">Период</label>
+                <select id="filter-period">
+                    <option value="all">Весь период</option>
+                    <option value="before">До пожара (до 2005)</option>
+                    <option value="after">После пожара (после 2005)</option>
+                    <option value="diff">Разница</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Площадь пожара (га): <span id="area-max-label">500 000</span></label>
+                <input type="range" id="filter-area" min="0" max="500000" value="500000" step="1000"/>
+            </div>
+
+            <div class="filter-group">
+                <label for="filter-vegetation">Тип растительности</label>
+                <select id="filter-vegetation">
+                    <option value="">Все типы</option>
+                    <option value="Хвойные леса">Хвойные леса</option>
+                    <option value="Лиственные леса">Лиственные леса</option>
+                    <option value="Смешанные леса">Смешанные леса</option>
+                    <option value="Кустарники">Кустарники</option>
+                    <option value="Луга">Луга</option>
+                </select>
+            </div>
+
+            <button id="btn-reset" class="btn-reset">Сбросить фильтры</button>
+
+            <div class="analytics-block">
+                <p class="sidebar-title" style="margin-top:12px">Аналитика</p>
+                <div class="analytics-placeholder" id="analytics-placeholder">
+                    Выберите пожар на карте
+                </div>
+                <div class="analytics-content" id="analytics-content">
+                    <div class="stat-row">
+                        <span class="stat-label">ID пожара</span>
+                        <span class="stat-value" id="stat-id">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Площадь</span>
+                        <span class="stat-value" id="stat-area">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Длительность</span>
+                        <span class="stat-value" id="stat-duration">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Индекс до пожара</span>
+                        <span class="stat-value" id="stat-before">—</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Индекс после пожара</span>
+                        <span class="stat-value" id="stat-after">—</span>
+                    </div>
+                    <div class="stat-row highlight">
+                        <span class="stat-label">Изменение</span>
+                        <span class="stat-value" id="stat-change">—</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+            <div class="charts-area">
+                <div class="chart-card">
+                    <p class="chart-title">Динамика индекса по годам</p>
+                    <canvas id="chart-line"></canvas>
+                </div>
+                <div class="chart-card">
+                    <p class="chart-title">Площади пожаров по лесничествам</p>
+                    <canvas id="chart-bar"></canvas>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+    <script src="js/eventbus.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
